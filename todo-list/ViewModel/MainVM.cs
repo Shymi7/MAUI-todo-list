@@ -1,5 +1,11 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using todo_list.Model;
 
@@ -36,21 +42,54 @@ namespace todo_list.ViewModel
         public ICommand DeleteTaskCommand { get; }
         public ICommand MarkTaskAsCompletedCommand { get; }
 
+        private static string CurrentTasksFilePath = Path.Combine(FileSystem.AppDataDirectory, "currentTasks.json");
+        private static string FinishedTasksFilePath = Path.Combine(FileSystem.AppDataDirectory, "finishedTasks.json");
+
         public event PropertyChangedEventHandler PropertyChanged;
         protected virtual void OnPropertyChanged(string propertyName)
         {
+            SaveTasks();
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         public MainVM()
         {
-            CurrentTasks = new TaskList(new ObservableCollection<Model.Task>());
-            FinishedTasks = new TaskList(new ObservableCollection<Model.Task>());
+            LoadTasks();
 
             AddTaskCommand = new Command(OnAddTask);
             DeleteTaskCommand = new Command<string>(OnDeleteTask);
             MarkTaskAsCompletedCommand = new Command<string>(OnMarkTaskAsCompleted);
+
         }
+
+        private void LoadTasks()
+        {
+            CurrentTasks = new TaskList(new ObservableCollection<Model.Task>());
+            FinishedTasks = new TaskList(new ObservableCollection<Model.Task>());
+
+            if (File.Exists(CurrentTasksFilePath))
+            {
+                string json = File.ReadAllText(CurrentTasksFilePath);
+                CurrentTasks = JsonSerializer.Deserialize<TaskList>(json) ?? new TaskList(new ObservableCollection<Model.Task>());
+            }
+
+            if (File.Exists(FinishedTasksFilePath))
+            {
+                string json = File.ReadAllText(FinishedTasksFilePath);
+                FinishedTasks = JsonSerializer.Deserialize<TaskList>(json) ?? new TaskList(new ObservableCollection<Model.Task>());
+            }
+
+        }
+
+        private void SaveTasks()
+        {
+            string json = JsonSerializer.Serialize(CurrentTasks);
+            File.WriteAllText(CurrentTasksFilePath, json);
+
+            json = JsonSerializer.Serialize(FinishedTasks);
+            File.WriteAllText(FinishedTasksFilePath, json);
+        }
+
 
 
         private void OnAddTask()
@@ -90,6 +129,11 @@ namespace todo_list.ViewModel
             OnPropertyChanged(nameof(CurrentTasks));
         }
 
+
+        private void OnAppClosing(object sender, ModalPoppedEventArgs e)
+        {
+            SaveTasks();
+        }
 
     }
 }

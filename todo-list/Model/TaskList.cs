@@ -6,8 +6,8 @@ namespace todo_list.Model
     {
 
         public ObservableCollection<Task> List { get; set; }
-        public TaskList(ObservableCollection<Task> list)
-        {
+        public TaskList(ObservableCollection<Task> list) 
+        { 
             List = list ?? new ObservableCollection<Task>();
         }
 
